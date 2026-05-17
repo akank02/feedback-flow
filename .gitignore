@@ -31,3 +31,14 @@ build/
 
 ### VS Code ###
 .vscode/
+
+
+
+/target
+*.class
+application.properties
+src/main/resources/application.properties
+application-*.properties
+*.env
+.idea/
+*.iml
