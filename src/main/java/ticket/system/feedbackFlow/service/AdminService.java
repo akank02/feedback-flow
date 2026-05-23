@@ -10,7 +10,7 @@ import ticket.system.feedbackFlow.enums.FeedbackCategory;
 import ticket.system.feedbackFlow.enums.FeedbackPriority;
 import ticket.system.feedbackFlow.enums.Status;
 import ticket.system.feedbackFlow.model.AdminResponse;
-import ticket.system.feedbackFlow.model.AuditLog;
+//import ticket.system.feedbackFlow.model.AuditLog;
 import ticket.system.feedbackFlow.model.Feedback;
 import ticket.system.feedbackFlow.model.User;
 import ticket.system.feedbackFlow.repository.*;
@@ -28,8 +28,9 @@ public class AdminService {
 
     private final FeedbackRepository feedbackRepository;
     private final AdminResponseRepository adminResponseRepository;
-    private final AuditLogRepository auditLogRepository;
     private final UserRepository userRepository;
+    private final AuditLogService auditLogService;
+    private final EmailService emailService;
 
     private User getAdminByEmail(String email) {
         return userRepository.findByEmail(email)
@@ -89,12 +90,14 @@ public class AdminService {
 
         feedbackRepository.save(feedback);
 
-        AuditLog log = new AuditLog();
-        log.setFeedback(feedback);
-        log.setChangedBy(admin);
-        log.setOldStatus(oldStatus);
-        log.setNewStatus(newStatus);
-        auditLogRepository.save(log);
+        auditLogService.log(feedback, admin, oldStatus, newStatus);
+
+        // after feedbackRepository.save(feedback) and auditLogService.log(...)
+        emailService.sendStatusUpdateEmail(
+            feedback.getUser().getEmail(),
+            feedback.getTitle(),
+            newStatus
+        );
 
         return FeedbackMapper.toFeedbackResponse(feedback);
     }
@@ -113,6 +116,12 @@ public class AdminService {
         response.setMessage(request.getMessage());
 
         AdminResponse saved = adminResponseRepository.save(response);
+
+        emailService.sendAdminResponseEmail(
+            feedback.getUser().getEmail(),
+            feedback.getTitle(),
+            request.getMessage()
+        );
 
         return new AdminResponseResponse(
                 saved.getId(),
