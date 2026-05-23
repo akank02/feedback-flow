@@ -1,26 +1,36 @@
 package ticket.system.feedbackFlow.service;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import ticket.system.feedbackFlow.dto.*;
-import ticket.system.feedbackFlow.enums.FeedbackCategory;
-import ticket.system.feedbackFlow.enums.FeedbackPriority;
-import ticket.system.feedbackFlow.enums.Status;
-import ticket.system.feedbackFlow.model.AdminResponse;
-//import ticket.system.feedbackFlow.model.AuditLog;
-import ticket.system.feedbackFlow.model.Feedback;
-import ticket.system.feedbackFlow.model.User;
-import ticket.system.feedbackFlow.repository.*;
-
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import lombok.RequiredArgsConstructor;
+import ticket.system.feedbackFlow.dto.AdminResponseRequest;
+import ticket.system.feedbackFlow.dto.AdminResponseResponse;
+import ticket.system.feedbackFlow.dto.AdminStatsResponse;
+import ticket.system.feedbackFlow.dto.FeedbackMapper;
+import ticket.system.feedbackFlow.dto.FeedbackResponse;
+import ticket.system.feedbackFlow.dto.StatusUpdateRequest;
+import ticket.system.feedbackFlow.enums.FeedbackCategory;
+import ticket.system.feedbackFlow.enums.FeedbackPriority;
+import ticket.system.feedbackFlow.enums.Status;
+import ticket.system.feedbackFlow.exception.ResourceNotFoundException;
+import ticket.system.feedbackFlow.exception.BadRequestException;
+import ticket.system.feedbackFlow.model.AdminResponse;
+import ticket.system.feedbackFlow.model.Feedback;
+import ticket.system.feedbackFlow.model.User;
+import ticket.system.feedbackFlow.repository.AdminResponseRepository;
+import ticket.system.feedbackFlow.repository.FeedbackRepository;
+import ticket.system.feedbackFlow.repository.FeedbackSpecification;
+import ticket.system.feedbackFlow.repository.UserRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -34,12 +44,12 @@ public class AdminService {
 
     private User getAdminByEmail(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Admin not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
     }
 
     private Feedback getFeedbackById(Long id) {
         return feedbackRepository.findByIdWithUser(id)
-                .orElseThrow(() -> new RuntimeException("Feedback not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Feedback not found with id: " + id));
     }
 
     private void validateTransition(Status current, Status next) {
@@ -49,7 +59,7 @@ public class AdminService {
             case RESOLVED, REJECTED -> false;
         };
         if (!valid) {
-            throw new RuntimeException(
+            throw new BadRequestException(
                 "Invalid transition: " + current + " → " + next);
         }
     }
@@ -70,7 +80,7 @@ public class AdminService {
                 .map(FeedbackMapper::toFeedbackResponse);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor=BadRequestException.class)
     public FeedbackResponse updateStatus(
             Long id, String adminEmail, StatusUpdateRequest request) {
 

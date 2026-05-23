@@ -4,10 +4,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
+import ticket.system.feedbackFlow.enums.Role;
+import ticket.system.feedbackFlow.exception.ResourceNotFoundException;
 import ticket.system.feedbackFlow.model.User;
 import ticket.system.feedbackFlow.repository.UserRepository;
-
-import ticket.system.feedbackFlow.enums.Role;
 
 @Service
 @RequiredArgsConstructor
@@ -17,7 +17,7 @@ public class UserService {
 
     public User registerUser(String name, String email, String password){
         if(userRepository.existsByEmail(email)){
-            throw new RuntimeException("User already exists");
+            throw new IllegalStateException("Email already registered: " + email);
         }else{
             User user = new User();
             user.setName(name);
@@ -32,14 +32,14 @@ public class UserService {
     }
     public User loginUser(String email, String password){
          User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
 
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
-            throw new RuntimeException("Invalid password");
+            throw new IllegalStateException("Invalid credentials");
         }
 
         if (!user.getIsActive()) {
-            throw new RuntimeException("Account is deactivated");
+            throw new IllegalStateException("Account is deactivated");
         }
 
         return user;

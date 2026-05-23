@@ -3,6 +3,7 @@ package ticket.system.feedbackFlow.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,6 +12,8 @@ import ticket.system.feedbackFlow.dto.FeedbackMapper;
 import ticket.system.feedbackFlow.dto.FeedbackRequest;
 import ticket.system.feedbackFlow.dto.FeedbackResponse;
 import ticket.system.feedbackFlow.enums.Status;
+import ticket.system.feedbackFlow.exception.ResourceNotFoundException;
+import ticket.system.feedbackFlow.exception.BadRequestException;
 import ticket.system.feedbackFlow.model.Feedback;
 import ticket.system.feedbackFlow.model.User;
 import ticket.system.feedbackFlow.repository.FeedbackRepository;
@@ -25,26 +28,26 @@ public class FeedbackService {
 
     private User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
     }
 
    
 
     private Feedback getFeedbackById(Long id) {
     return feedbackRepository.findByIdWithUser(id)
-            .orElseThrow(() -> new RuntimeException("Feedback not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Feedback not found with id: " + id));
 }
 
     private void validateOwnership(Feedback feedback, User user) {
         if (!feedback.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("Access denied — not your feedback");
+            throw new AccessDeniedException("Access denied — not your feedback");
         }
     }
 
     private void validateEditable(Feedback feedback) {
         if (feedback.getStatus() != Status.OPEN) {
-            throw new RuntimeException(
-                "Cannot edit feedback that is " + feedback.getStatus());
+            throw new BadRequestException(
+                "Cannot edit feedback — status is: " + feedback.getStatus());
         }
     }
 
