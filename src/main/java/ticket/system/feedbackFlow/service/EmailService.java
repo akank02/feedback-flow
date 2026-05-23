@@ -1,10 +1,11 @@
 package ticket.system.feedbackFlow.service;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import lombok.RequiredArgsConstructor;
 import ticket.system.feedbackFlow.enums.Status;
 
 @Service
@@ -39,14 +40,17 @@ public class EmailService {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);
         message.setSubject("Admin has responded to your feedback");
-        message.setText(
-                "Hello,\n\n" +
-                "An admin has responded to your feedback " +
-                "\"" + feedbackTitle + "\":\n\n" +
-                "\"" + adminMessage + "\"\n\n" +
-                "Login to view the full conversation.\n\n" +
-                "FeedbackFlow Team"
-        );
+        message.setText("""
+        Hello,
+
+        An admin has responded to your feedback "%s":
+
+        "%s"
+
+        Login to view the full conversation.
+
+        FeedbackFlow Team
+        """.formatted(feedbackTitle, adminMessage));
 
         mailSender.send(message);
     }
