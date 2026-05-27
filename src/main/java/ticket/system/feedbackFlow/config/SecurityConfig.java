@@ -17,12 +17,14 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import lombok.RequiredArgsConstructor;
 import ticket.system.feedbackFlow.security.JwtFilter;
 
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    
     private final JwtFilter jwtFilter;
 
     @Bean
@@ -53,6 +55,12 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/**").permitAll()
+                .requestMatchers(
+                    "/swagger-ui.html",
+                    "/swagger-ui/**",
+                    "/api-docs/**",
+                    "/v3/api-docs/**"
+                ).permitAll()
                 .anyRequest().authenticated())
             .addFilterBefore(jwtFilter,
                 UsernamePasswordAuthenticationFilter.class);

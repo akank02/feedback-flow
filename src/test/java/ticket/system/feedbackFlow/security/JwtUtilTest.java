@@ -13,6 +13,7 @@ class JwtUtilTest {
     private JwtUtil jwtUtil;
 
     @BeforeEach
+    @SuppressWarnings("unused")
     void setUp() {
         jwtUtil = new JwtUtil();
         ReflectionTestUtils.setField(jwtUtil, "jwtSecret",

@@ -3,8 +3,10 @@ package ticket.system.feedbackFlow.service;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,7 +24,6 @@ import ticket.system.feedbackFlow.exception.BadRequestException;
 import ticket.system.feedbackFlow.exception.ResourceNotFoundException;
 import ticket.system.feedbackFlow.model.Feedback;
 import ticket.system.feedbackFlow.model.User;
-import ticket.system.feedbackFlow.repository.AdminResponseRepository;
 import ticket.system.feedbackFlow.repository.FeedbackRepository;
 import ticket.system.feedbackFlow.repository.UserRepository;
 
@@ -30,7 +31,6 @@ import ticket.system.feedbackFlow.repository.UserRepository;
 class AdminServiceStateMachineTest {
 
     @Mock private FeedbackRepository feedbackRepository;
-    @Mock private AdminResponseRepository adminResponseRepository;
     @Mock private UserRepository userRepository;
     @Mock private AuditLogService auditLogService;
     @Mock private EmailService emailService;
@@ -42,6 +42,7 @@ class AdminServiceStateMachineTest {
     private Feedback feedback;
 
     @BeforeEach
+    @SuppressWarnings("unused")
     void setUp() {
         admin = new User();
         admin.setId(1L);
@@ -108,8 +109,14 @@ class AdminServiceStateMachineTest {
         StatusUpdateRequest request = new StatusUpdateRequest();
         request.setStatus(Status.OPEN);
 
-        assertThrows(BadRequestException.class, () ->
-                adminService.updateStatus(1L, "admin@gmail.com", request));
+        ResourceNotFoundException ex =
+        assertThrows(ResourceNotFoundException.class, () ->
+                adminService.updateStatus(1L, "unknown@gmail.com", request));
+
+assertEquals(
+        "User not found with email: unknown@gmail.com",
+        ex.getMessage()
+);
     }
 
     @Test
@@ -118,8 +125,11 @@ class AdminServiceStateMachineTest {
         StatusUpdateRequest request = new StatusUpdateRequest();
         request.setStatus(Status.IN_PROGRESS);
 
+        BadRequestException ex =
         assertThrows(BadRequestException.class, () ->
                 adminService.updateStatus(1L, "admin@gmail.com", request));
+
+assertTrue(ex.getMessage().contains("Invalid transition"));
     }
 
     @Test
@@ -128,8 +138,11 @@ class AdminServiceStateMachineTest {
         StatusUpdateRequest request = new StatusUpdateRequest();
         request.setStatus(Status.RESOLVED);
 
+        BadRequestException ex =
         assertThrows(BadRequestException.class, () ->
                 adminService.updateStatus(1L, "admin@gmail.com", request));
+
+assertTrue(ex.getMessage().contains("Invalid transition"));
     }
 
     // ── resolvedAt auto-set ────────────────────────────────────
@@ -166,8 +179,14 @@ class AdminServiceStateMachineTest {
         StatusUpdateRequest request = new StatusUpdateRequest();
         request.setStatus(Status.IN_PROGRESS);
 
+        ResourceNotFoundException ex =
         assertThrows(ResourceNotFoundException.class, () ->
-                adminService.updateStatus(999L, "admin@gmail.com", request));
+                adminService.updateStatus(1L, "unknown@gmail.com", request));
+
+assertEquals(
+        "User not found with email: unknown@gmail.com",
+        ex.getMessage()
+);
     }
 
     @Test
@@ -178,8 +197,14 @@ class AdminServiceStateMachineTest {
         StatusUpdateRequest request = new StatusUpdateRequest();
         request.setStatus(Status.IN_PROGRESS);
 
+        ResourceNotFoundException ex =
         assertThrows(ResourceNotFoundException.class, () ->
                 adminService.updateStatus(1L, "unknown@gmail.com", request));
+
+assertEquals(
+        "User not found with email: unknown@gmail.com",
+        ex.getMessage()
+);
     }
 
     // ── Helper ─────────────────────────────────────────────────

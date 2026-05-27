@@ -19,6 +19,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import ticket.system.feedbackFlow.dto.AdminResponseRequest;
@@ -35,6 +40,9 @@ import ticket.system.feedbackFlow.service.AdminService;
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
+@Tag(name = "Admin",
+     description = "Admin-only endpoints. Requires JWT with ADMIN role.")
+@SecurityRequirement(name = "Bearer Authentication")
 public class AdminController {
 
     private final AdminService adminService;
@@ -44,6 +52,16 @@ public class AdminController {
                 .getAuthentication().getName();
     }
 
+    @Operation(
+        summary = "Get all feedback",
+        description = "Returns paginated list of all feedback. " +
+                      "Supports filtering by status, category, priority, " +
+                      "and date range."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Paginated feedback list"),
+        @ApiResponse(responseCode = "403", description = "Not an admin")
+    })
     @GetMapping("/feedback")
     public ResponseEntity<Page<FeedbackResponse>> getAllFeedback(
             @RequestParam(required = false) Status status,
@@ -62,25 +80,52 @@ public class AdminController {
                 status, category, priority, from, to, pageable));
     }
 
+    @Operation(
+        summary = "Update feedback status",
+        description = "Change feedback status following the state machine: " +
+                      "OPEN → IN_PROGRESS → RESOLVED/REJECTED. " +
+                      "Writes to AuditLog and sends email notification."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Status updated"),
+        @ApiResponse(responseCode = "400", description = "Invalid state transition"),
+        @ApiResponse(responseCode = "403", description = "Not an admin"),
+        @ApiResponse(responseCode = "404", description = "Feedback not found")
+    })
     @PatchMapping("/feedback/{id}/status")
     public ResponseEntity<FeedbackResponse> updateStatus(
             @PathVariable Long id,
             @Valid @RequestBody StatusUpdateRequest request) {
-
         return ResponseEntity.ok(
                 adminService.updateStatus(id, getEmail(), request));
     }
 
+    @Operation(
+        summary = "Post admin response",
+        description = "Post a reply to a feedback. " +
+                      "Sends email notification to the user."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Response posted"),
+        @ApiResponse(responseCode = "403", description = "Not an admin"),
+        @ApiResponse(responseCode = "404", description = "Feedback not found")
+    })
     @PostMapping("/feedback/{id}/respond")
     public ResponseEntity<AdminResponseResponse> postResponse(
             @PathVariable Long id,
             @Valid @RequestBody AdminResponseRequest request) {
-
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(adminService.postResponse(id, getEmail(), request));
     }
 
+    @Operation(
+        summary = "Dashboard stats",
+        description = "Returns total feedback count, breakdown by status " +
+                      "and category, and average resolution time in hours."
+    )
+    @ApiResponse(responseCode = "200", description = "Stats returned")
+    @ApiResponse(responseCode = "403", description = "Not an admin")
     @GetMapping("/stats")
     public ResponseEntity<AdminStatsResponse> getStats() {
         return ResponseEntity.ok(adminService.getStats());
